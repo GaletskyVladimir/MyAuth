@@ -17,15 +17,13 @@ namespace MyAuth.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
-        private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
+        private readonly UserManager<AppUser> _userManager;
 
-        public HomeController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, ILogger<HomeController> logger)
+        public HomeController(SignInManager<AppUser> signInManager, UserManager<AppUser> userManager)
         {
-            _userManager = userManager;
             _signInManager = signInManager;
-            _logger = logger;
+            _userManager = userManager;
         }
 
         public IActionResult Index()
@@ -45,9 +43,23 @@ namespace MyAuth.Controllers
         }
 
         [Authorize(Roles ="admin")]
+        [HttpGet]
         public IActionResult Admin()
         {
             return View();
+        }
+
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> UpdatePass()
+        {
+            var user = await _userManager.GetUserAsync(HttpContext.User);
+            var result = await _userManager.ChangePasswordAsync(user, "Nidsf473!", "Nidsf473!");
+            if (result.Succeeded)
+            {
+                await _userManager.UpdateSecurityStampAsync(user);
+            }
+            
+            return View("Index", "Home");
         }
 
         [HttpGet("Login")]
@@ -84,7 +96,9 @@ namespace MyAuth.Controllers
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
+            var user = await _userManager.GetUserAsync(HttpContext.User);
             await _signInManager.SignOutAsync();
+            await _userManager.UpdateSecurityStampAsync(user);
             return RedirectToAction("Index", "Home");
         }
 

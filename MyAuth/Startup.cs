@@ -13,6 +13,8 @@ using System;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using MyAuth.Data.Models;
+using System.IO;
+using Microsoft.Extensions.FileProviders;
 
 namespace MyAuth
 {
@@ -31,6 +33,7 @@ namespace MyAuth
                 options.UseSqlServer(
                     Configuration.GetConnectionString("DefaultConnection")));
             services.AddControllersWithViews();
+            services.AddDirectoryBrowser();
             //services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
             //    .AddCookie(options => {
             //        options.LoginPath = "/login";
@@ -57,13 +60,22 @@ namespace MyAuth
             services.AddHealthChecks()
                 .AddCheck<Service1HealthCheck>("Service1", null, new[] { "service" })
                 .AddCheck<Service2HealthCheck>("Service2", null, new[] { "service" })
-                .AddCheck<DatabaseHealthCheck>("DB", null, new[] { "database" });
+                .AddCheck<DatabaseHealthCheck>("DB", null, new[] { "database" })
+                .AddDbContextCheck<ApplicationDbContext>("EF database");
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+
+            app.UseDirectoryBrowser(new DirectoryBrowserOptions
+            {
+                FileProvider = new PhysicalFileProvider(
+                    Path.Combine(env.ContentRootPath, "StaticFiles/images")),
+                RequestPath = "/StaticFiles/images"
+            });
+
             app.UseMiddleware<PasswordHelpMiddleware>();
             app.UseRouting();
 
